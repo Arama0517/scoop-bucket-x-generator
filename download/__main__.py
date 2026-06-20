@@ -9,21 +9,24 @@ from requests.models import Response
 
 from merge.config import BUCKETS, SYNC_DIRS_NAME, Bucket
 
+session = requests.Session()
+
 
 def download(bucket: Bucket):
     with contextlib.suppress(Exception):
-        response: Response = requests.get(
+        response: Response = session.get(
             bucket.url.rstrip("/") + "/archive/HEAD.zip", timeout=60
         )
         if response.status_code != 200:
             return
 
         z = zipfile.ZipFile(io.BytesIO(response.content))
-        root: str = z.namelist()[0].split("/", 1)[0] + "/"
+        names: list[str] = z.namelist()
+        root: str = names[0].split("/", 1)[0] + "/"
 
         bucket.repo_dir.mkdir(parents=True, exist_ok=True)
 
-        for name in z.namelist():
+        for name in names:
             if not name.startswith(root):
                 continue
 
