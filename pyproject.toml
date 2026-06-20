@@ -1,0 +1,40 @@
+[project]
+name = "scoop-bucket-x"
+version = "1.0.0"
+description = "适合中国大陆的 scoop 代理镜像 bucket. 同步了几乎整个 GitHub 能找到的全部 bucket"
+requires-python = "==3.14.6"
+dependencies = ["orjson==3.11.9", "requests==2.34.2"]
+
+[dependency-groups]
+dev = ["python-dotenv==1.2.2", "types-requests==2.33.0.20260518"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py314"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle (error)
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "B",   # bugbear
+    "C",   # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "I",   # isort
+    "UP",  # pyupgrade
+    "PIE", # flake8-pie
+    "PGH", # pygrep-hooks
+    "PYI", # flake8-pyi
+    "RUF",
+    "S",   # flake8-bandit
+]
+
+ignore = ["C901", "E501", "S311", "S603", "S607", "S404", "RUF067"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true

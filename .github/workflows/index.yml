@@ -1,0 +1,33 @@
+name: Index buckets
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  index:
+    name: Index buckets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup UV
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+
+      - name: Download scoop-directory database
+        run: wget -O scoop_directory.db https://raw.githubusercontent.com/rasa/scoop-directory/refs/heads/master/scoop_directory.db
+
+      - name: Index buckets
+        run: uv run --no-dev -m index
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+
+      - name: Save buckets index to cache
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: cache_buckets.json
+          key: cache-${{ github.run_id }}

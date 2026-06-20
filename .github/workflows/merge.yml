@@ -1,0 +1,133 @@
+name: Merge bucket
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  delete_runs:
+    name: Delete old workflow runs
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Delete old workflow runs
+        uses: Mattraks/delete-workflow-runs@b3018382ca039b53d238908238bd35d1fb14f8ee # v2.1.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          retain_days: 1
+          keep_minimum_runs: 6
+          delete_workflow_by_state_pattern: "ALL"
+          delete_run_by_conclusion_pattern: "ALL"
+
+  excavate:
+    name: Excavate
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Excavate
+        uses: ScoopInstaller/GithubActions@e174c3bef2aeec16a40f2f075cafa167733f0a3e # main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  download:
+    name: Download buckets
+    runs-on: ubuntu-latest
+    needs:
+      - excavate
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup UV
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+
+      - name: Restore buckets index
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: cache_buckets.json
+          key: cache
+          restore-keys: cache
+
+      - name: Download buckets
+        run: uv run --no-dev -m download
+
+      - name: Save cache
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: cache/
+          key: buckets-${{ github.run_id }}
+
+  merge:
+    name: Merge buckets for ${{ matrix.branch_name }} branch
+    runs-on: ubuntu-latest
+    needs:
+      - excavate
+      - download
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        include:
+          - only_sync: 1
+            branch_name: bucket
+          - only_sync: 0
+            branch_name: proxy_bucket
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup UV
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+
+      - name: Restore buckets index
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: cache_buckets.json
+          key: cache
+          restore-keys: cache
+
+      - name: Restore cache
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: cache/
+          key: buckets-${{ github.run_id }}
+          restore-keys: buckets
+
+      - name: Merge buckets
+        run: uv run --no-dev -m merge
+        env:
+          ONLY_SYNC: ${{ matrix.only_sync }}
+
+      - name: Init ${{ matrix.branch_name }} branch and get commit message
+        id: init
+        run: |
+          echo "commit_message=feat(bucket): auto update at $(TZ=Asia/Shanghai date +'%Y-%m-%d %H:%M')" >> $GITHUB_OUTPUT
+
+          mkdir -p results/bin
+          wget -O results/bin/php-postinstall.ps1 https://raw.githubusercontent.com/ScoopInstaller/PHP/refs/heads/master/bin/postinstall.ps1
+          cp ./README.md ./results/README.md
+          cp ./LICENSE ./results/LICENSE
+
+      - name: Deploy to ${{ matrix.branch_name }} branch
+        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: ${{ matrix.branch_name }}
+          publish_dir: ./results
+          user_name: "github-actions[bot]"
+          user_email: "41898282+github-actions[bot]@users.noreply.github.com"
+          full_commit_message: ${{ steps.init.outputs.commit_message }}
+          enable_jekyll: true
+          force_orphan: true
