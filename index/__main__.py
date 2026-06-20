@@ -134,7 +134,7 @@ from_scoop_sh(False)
 
 # 预定义
 predefine_buckets: dict[str, int] = {
-    "https://github.com/Arama0517/scoop-bucket-x": 100000,
+    "https://github.com/Arama0517/scoop-bucket-x-generator": 100000,
     "https://github.com/anderlli0053/DEV-tools": -60000,
     "https://github.com/kkzzhizhou/scoop-apps": -70000,
     "https://github.com/cmontage/scoopbucket-third": -80000,
@@ -143,6 +143,9 @@ predefine_buckets: dict[str, int] = {
 }
 for url, stars in predefine_buckets.items():
     buckets[Bucket.get_bucket_key(url)] = Bucket(url, stars)
+
+# 防止重复
+buckets.pop(Bucket.get_bucket_key("https://github.com/Arama0517/scoop-bucket-x"), None)
 
 result: list[dict[str, str | int]] = []
 for bucket in sorted(buckets.values(), key=lambda b: b.stars, reverse=True):
