@@ -4,11 +4,16 @@
 
 ## 使用方法
 
-1. 添加本仓库
+### 添加本仓库
 
-(推荐) 镜像:
+> [!NOTE]
+> 默认为 `bucket` 分支, 此分支没有替换下载链接为镜像
+>
+> 如果你使用的是官方 [scoop](https://scoop.sh) 或者没有在安装 App 替换镜像功能的 `scoop` 请运行 [步骤2](#可选-更换分支) 的命令
 
-```
+(推荐) 使用镜像加速下载和更新的速度:
+
+```powershell
 scoop bucket add sbx https://v4.gh-proxy.org/https://github.com/Arama0517/scoop-bucket-x.git
 ```
 
@@ -18,12 +23,12 @@ scoop bucket add sbx https://v4.gh-proxy.org/https://github.com/Arama0517/scoop-
 scoop bucket add sbx https://github.com/Arama0517/scoop-bucket-x.git
 ```
 
-2. (可选) 更换分支
+### (可选) 更换分支
 
 > [!NOTE]
 > 以下命令为 `proxy_bucket` 分支, 会将部分下载链接替换为镜像
 >
-> 后续想要更换回去请把 `git switch proxy_bucket` 改为 `git switch bucket`
+> 如果你想要改为没有镜像的版本, 请将 `git switch proxy_bucket` 替换为 `git switch bucket`
 
 ```powershell
 $path = if ($env:SCOOP) { $env:SCOOP } else { "$env:USERPROFILE\scoop" }
@@ -31,7 +36,7 @@ cd $path\buckets\main
 git fetch --all && git switch proxy_bucket
 ```
 
-1. (可选) 将已安装应用的上游替换为本仓库
+### (可选) 将已安装应用的上游替换为本仓库
 
 ```powershell
 $path = if ($env:SCOOP) { $env:SCOOP } else { "$env:USERPROFILE\scoop" }
