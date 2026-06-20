@@ -123,7 +123,8 @@ jobs:
       - name: Deploy to ${{ matrix.branch_name }} branch
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          personal_token: ${{ secrets.GH_PAT }}
+          external_repository: Arama0517/scoop-bucket-x
           publish_branch: ${{ matrix.branch_name }}
           publish_dir: ./results
           user_name: "github-actions[bot]"
