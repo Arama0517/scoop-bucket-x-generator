@@ -117,6 +117,11 @@ jobs:
           cp ./README.md ./results/README.md
           cp ./LICENSE ./results/LICENSE
 
+          cp -r ./.github ./results/
+          rm ./.github/workflows/codeql.yml
+          rm ./.github/workflows/merge.yml
+          rm ./.github/workflows/index.yml
+
       - name: Deploy to ${{ matrix.branch_name }} branch
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
         with:

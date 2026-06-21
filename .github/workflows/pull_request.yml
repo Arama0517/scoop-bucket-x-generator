@@ -1,0 +1,22 @@
+name: Pull Requests
+
+on:
+  pull_request:
+    types:
+      - opened
+
+jobs:
+  pr_handler:
+    name: Pull Request Handler
+    permissions:
+      contents: read
+      pull-requests: write
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Pull Request Handler
+        uses: ScoopInstaller/GithubActions@main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
