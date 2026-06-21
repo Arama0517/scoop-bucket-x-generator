@@ -7,12 +7,14 @@ concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   delete_runs:
     name: Delete old workflow runs
     runs-on: ubuntu-latest
     permissions:
-      contents: read
       actions: write
     steps:
       - name: Delete old workflow runs
@@ -44,8 +46,6 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - excavate
-    permissions:
-      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -75,8 +75,6 @@ jobs:
     needs:
       - excavate
       - download
-    permissions:
-      contents: write
     strategy:
       matrix:
         include:
@@ -103,7 +101,6 @@ jobs:
         with:
           path: cache/
           key: buckets-${{ github.run_id }}
-          restore-keys: buckets
 
       - name: Merge buckets
         run: uv run --no-dev -m merge
@@ -123,7 +120,7 @@ jobs:
       - name: Deploy to ${{ matrix.branch_name }} branch
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
         with:
-          personal_token: ${{ secrets.GH_PAT }}
+          github_token: ${{ secrets.MERGE_TOKEN }}
           external_repository: Arama0517/scoop-bucket-x
           publish_branch: ${{ matrix.branch_name }}
           publish_dir: ./results
