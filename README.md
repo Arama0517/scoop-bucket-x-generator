@@ -32,7 +32,7 @@ scoop bucket add sbx https://github.com/Arama0517/scoop-bucket-x.git
 
 ```powershell
 $path = if ($env:SCOOP) { $env:SCOOP } else { "$env:USERPROFILE\scoop" }
-cd $path\buckets\main
+cd $path\buckets\sbx
 git fetch --all && git switch proxy_bucket
 ```
 
@@ -43,7 +43,7 @@ $path = if ($env:SCOOP) { $env:SCOOP } else { "$env:USERPROFILE\scoop" }
 Get-ChildItem $path\apps\*\current\install.json -Recurse |
   ForEach-Object {
     $j = Get-Content $_ -Raw | ConvertFrom-Json
-    $j.bucket = "main"
+    $j.bucket = "sbx"
     $j | ConvertTo-Json -Depth 10 | Set-Content $_
   }
 scoop update && scoop update *
