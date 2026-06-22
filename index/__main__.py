@@ -1,4 +1,3 @@
-import contextlib
 import os
 import re
 import sqlite3
@@ -80,6 +79,9 @@ class GitHubClient:
         self.rest_remaining = int(resp.headers.get("X-RateLimit-Remaining", 0) or 0)
         self.rest_reset = int(resp.headers.get("X-RateLimit-Reset", 0) or 0)
 
+        if resp.status_code == 404:
+            raise ValueError("not found")
+
         if resp.status_code in (403, 429):
             self.use_graphql = True
             raise RuntimeError("REST rate limited")
@@ -123,6 +125,10 @@ class GitHubClient:
             self.use_graphql = False
             raise RuntimeError("GraphQL rate limited")
 
+        repo = data.get("data", {}).get("repository")
+        if repo is None:
+            raise ValueError("not found")
+
         repo = data["data"]["repository"]
         return {
             "stars": repo["stargazerCount"],
@@ -130,10 +136,14 @@ class GitHubClient:
         }
 
     def get_repo(self, full_name: str):
-        with contextlib.suppress(Exception):
+        try:
             if self.use_graphql:
                 owner, name = full_name.split("/")
                 return self.graphql_repo(owner, name)
+        except ValueError:
+            return {}
+        except Exception:
+            pass
 
         data = self.rest_repo(full_name)
         return {
@@ -216,14 +226,21 @@ def from_scoop_sh(official: bool, count: int = 100000):
         else:
             repo_full = url.replace("https://github.com/", "")
 
-            try:
-                data = client.get_repo(repo_full)
-                stars = data["stars"]
-                updated_time = datetime.fromisoformat(
-                    data["updated_at"].replace("Z", "+00:00")
-                ).astimezone(UTC)
-
-            except Exception:
+            not_found = False
+            for _ in range(3):
+                try:
+                    data = client.get_repo(repo_full)
+                    if not data:
+                        not_found = True
+                        break
+                    stars = data["stars"]
+                    updated_time = datetime.fromisoformat(
+                        data["updated_at"].replace("Z", "+00:00")
+                    ).astimezone(UTC)
+                    break
+                except Exception:
+                    continue
+            if not_found:
                 continue
 
         buckets[Bucket.get_bucket_key(url)] = Bucket(url, stars, updated_time)
