@@ -35,13 +35,9 @@ jobs:
     steps:
       - name: Delete old buckets cache
         run: |
-          gh cache list --repo Arama0517/scoop-bucket-x-generator --json id,key \
-            | jq -r '.[] | select(.key | startswith("buckets-")) | .id' \
-            | while read id; do
-                [ -z "$id" ] && continue
-                echo "Deleting cache $id"
-                gh cache delete "$id" --repo Arama0517/scoop-bucket-x-generator
-              done
+          gh cache list -R Arama0517/scoop-bucket-x-generator -k buckets --json id \
+            | jq -r '.[].id' \
+            | xargs -I {} gh cache delete {} -R Arama0517/scoop-bucket-x-generator
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
