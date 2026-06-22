@@ -27,6 +27,24 @@ jobs:
           delete_workflow_by_state_pattern: "ALL"
           delete_run_by_conclusion_pattern: "ALL"
 
+  delete_cache:
+    name: Delete old buckets cache
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Delete old buckets cache
+        run: |
+          gh cache list --repo Arama0517/scoop-bucket-x-generator --json id,key \
+            | jq -r '.[] | select(.key | startswith("buckets-")) | .id' \
+            | while read id; do
+                [ -z "$id" ] && continue
+                echo "Deleting cache $id"
+                gh cache delete "$id" --repo Arama0517/scoop-bucket-x-generator
+              done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   excavate:
     name: Excavate
     runs-on: windows-latest
@@ -45,6 +63,7 @@ jobs:
     name: Download buckets
     runs-on: ubuntu-latest
     needs:
+      - delete_cache
       - excavate
     steps:
       - name: Checkout
@@ -101,6 +120,7 @@ jobs:
         with:
           path: cache/
           key: buckets-${{ github.run_id }}
+          fail-on-cache-miss: true
 
       - name: Merge buckets
         run: uv run --no-dev -m merge
