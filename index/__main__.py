@@ -1,7 +1,7 @@
 import os
 import re
 import sqlite3
-import time
+from datetime import UTC, datetime, timedelta
 from re import Match
 from sqlite3 import Cursor
 from typing import Any
@@ -15,12 +15,19 @@ from merge.config import CACHE_BUCKETS_FILE, CURRENT_DIR, Bucket
 
 buckets: dict[str, Bucket] = {}
 
+placehold_time: datetime = datetime.now(UTC) + timedelta(days=30 * 365)
+
 # Scoop Directory
 with sqlite3.connect(CURRENT_DIR / "scoop_directory.db") as connect:
     cursor: Cursor = connect.cursor()
-    cursor.execute("SELECT bucket_url, stars FROM buckets")
-    for url, stars in cursor.fetchall():
-        buckets[Bucket.get_bucket_key(url)] = Bucket(url, stars)
+    cursor.execute("SELECT bucket_url, stars, updated FROM buckets")
+    for url, stars, updated in cursor.fetchall():
+        updated = updated.replace("&#x2011;", "-")
+        buckets[Bucket.get_bucket_key(url)] = Bucket(
+            url,
+            stars,
+            datetime.strptime(updated, "%y-%m-%d").astimezone(UTC),
+        )
 
 # Scoop Search
 base_url = "https://scoop.sh"
@@ -49,48 +56,6 @@ if not match_key:
 AZURE_SEARCH_KEY: str = match_key.group(1)
 
 
-def get_github_stars(session: Session, url: str) -> int:
-    repo = url.replace("https://github.com/", "")
-
-    response: Response = session.get(
-        f"https://api.github.com/repos/{repo}",
-        headers={
-            "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
-        },
-        timeout=30,
-    )
-
-    response.raise_for_status()
-
-    return response.json()["stargazers_count"]
-
-
-def get_azure_stars(session: Session, url: str) -> int:
-    for i in range(3):
-        response: Response = session.post(
-            "https://scoopsearch.search.windows.net/indexes/apps/docs/search?api-version=2020-06-30",
-            json={
-                "search": f'"{url}"',
-                "select": "Metadata/RepositoryStars",
-                "top": 1,
-            },
-            headers={"api-key": AZURE_SEARCH_KEY},
-            timeout=60,
-        )
-
-        if response.status_code == 200:
-            return response.json()["value"][0]["Metadata"]["RepositoryStars"]
-
-        if response.status_code in (429, 503):
-            time.sleep(2**i)
-            continue
-
-        response.raise_for_status()
-
-    raise RuntimeError("azure failed")
-
-
 def from_scoop_sh(official: bool, count: int = 100000):
     session = Session()
     response: Response = session.post(
@@ -106,8 +71,6 @@ def from_scoop_sh(official: bool, count: int = 100000):
     response.raise_for_status()
     repos = response.json()["@search.facets"]["Metadata/Repository"]
 
-    use_azure = True
-
     for repo in repos:
         url = repo["value"]
         if not url:
@@ -115,17 +78,26 @@ def from_scoop_sh(official: bool, count: int = 100000):
 
         if official:
             stars = 90000
+            updated_time: datetime = placehold_time
         else:
-            try:
-                if use_azure:
-                    stars: int = get_azure_stars(session, url)
-                else:
-                    raise RuntimeError()
-            except Exception:
-                use_azure = False
-                stars: int = get_github_stars(session, url)
+            repo = url.replace("https://github.com/", "")
 
-        buckets[Bucket.get_bucket_key(url)] = Bucket(url, stars)
+            response: Response = session.get(
+                f"https://api.github.com/repos/{repo}",
+                headers={
+                    "Accept": "application/vnd.github+json",
+                    "Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
+                },
+                timeout=30,
+            )
+
+            response.raise_for_status()
+            data: Any = response.json()
+            stars = data["stargazers_count"]
+            updated_time: datetime = datetime.fromisoformat(
+                data["updated_at"].replace("Z", "+00:00")
+            ).astimezone(UTC)
+        buckets[Bucket.get_bucket_key(url)] = Bucket(url, stars, updated_time)
 
 
 from_scoop_sh(True)
@@ -142,13 +114,17 @@ predefine_buckets: dict[str, int] = {
     "https://github.com/okibcn/ScoopMaster": -100000,
 }
 for url, stars in predefine_buckets.items():
-    buckets[Bucket.get_bucket_key(url)] = Bucket(url, stars)
+    buckets[Bucket.get_bucket_key(url)] = Bucket(url, stars, placehold_time)
 
 # 防止重复
 buckets.pop(Bucket.get_bucket_key("https://github.com/Arama0517/scoop-bucket-x"), None)
 
-result: list[dict[str, str | int]] = []
+result: list[dict[str, str | int | datetime]] = []
 for bucket in sorted(buckets.values(), key=lambda b: b.stars, reverse=True):
-    result.append({"url": bucket.url, "stars": bucket.stars})
+    result.append({
+        "url": bucket.url,
+        "stars": bucket.stars,
+        "updated_time": bucket.updated_time,
+    })
 
 CACHE_BUCKETS_FILE.write_bytes(orjson.dumps(result))

@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from re import IGNORECASE, MULTILINE, Match, Pattern, compile
 
@@ -45,6 +46,7 @@ IGNORE_FILES_NAME: list[str] = [
 class Bucket:
     url: str
     stars: int
+    updated_time: datetime
     repo_dir: Path = field(init=False)
 
     def __post_init__(self):
@@ -64,7 +66,13 @@ BUCKETS: list[Bucket] = []
 if CACHE_BUCKETS_FILE.exists():
     cache_buckets = orjson.loads(CACHE_BUCKETS_FILE.read_bytes())
     for bucket in cache_buckets:
-        BUCKETS.append(Bucket(bucket["url"], bucket["stars"]))
+        BUCKETS.append(
+            Bucket(
+                bucket["url"],
+                bucket["stars"],
+                datetime.fromisoformat(bucket["updated_time"]),
+            )
+        )
 
 type Rule = tuple[Pattern[bytes] | bytes, bytes | Callable[[Match[bytes]], bytes]]
 
