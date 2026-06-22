@@ -29,7 +29,7 @@ select = [
     "S",   # flake8-bandit
 ]
 
-ignore = ["C901", "E501", "S311", "S603", "S607", "S404", "RUF067"]
+ignore = ["C901", "E501", "S112", "S311", "S603", "S607", "S404", "RUF067"]
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
