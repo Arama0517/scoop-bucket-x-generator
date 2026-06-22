@@ -23,7 +23,7 @@ placehold_time: datetime = datetime.now(UTC)
 class GitHubClient:
     def __init__(self, token: str):
         self.session = Session()
-        self.token = token
+        self.token: str = token
 
         self.use_graphql = True
 
@@ -40,21 +40,21 @@ class GitHubClient:
         }
 
     def _sleep_if_needed(self):
-        now = time.time()
+        now: int | float = time.time()
 
         if self.use_graphql:
             if self.graphql_remaining is not None and self.graphql_remaining <= 0:
-                wait = self.graphql_reset - now
+                wait: int | float = self.graphql_reset - now
                 if wait > 0:
                     time.sleep(wait + 1)
         else:
             if self.rest_remaining is not None and self.rest_remaining <= 0:
-                wait = self.rest_reset - now
+                wait: int | float = self.rest_reset - now
                 if wait > 0:
                     time.sleep(wait + 1)
 
     def _switch(self):
-        now = time.time()
+        now: int | float = time.time()
 
         if self.use_graphql:
             if self.graphql_remaining is not None and self.graphql_remaining <= 2:
@@ -103,23 +103,23 @@ class GitHubClient:
         }
         """
 
-        resp: Response = self.session.post(
+        response: Response = self.session.post(
             "https://api.github.com/graphql",
             json={"query": query, "variables": {"owner": owner, "name": name}},
             headers=self.headers(),
             timeout=30,
         )
 
-        data = resp.json()
+        data = response.json()
 
-        rl = data.get("data", {}).get("rateLimit")
-        if rl:
-            self.graphql_remaining = rl.get("remaining", 0)
-            self.graphql_reset = datetime.strptime(
-                rl["resetAt"], "%Y-%m-%dT%H:%M:%SZ"
+        rate_limit = data.get("data", {}).get("rateLimit")
+        if rate_limit:
+            self.graphql_remaining = rate_limit.get("remaining", 0)
+            self.graphql_reset: int | float = datetime.strptime(
+                rate_limit["resetAt"], "%Y-%m-%dT%H:%M:%SZ"
             ).timestamp()
 
-        if resp.status_code in (403, 429) or "errors" in data:
+        if response.status_code in (403, 429) or "errors" in data:
             self.use_graphql = False
             raise RuntimeError("GraphQL rate limited")
 
@@ -129,9 +129,6 @@ class GitHubClient:
             "updated_at": repo["updatedAt"],
         }
 
-    # -------------------------
-    # unified
-    # -------------------------
     def get_repo(self, full_name: str):
         with contextlib.suppress(Exception):
             if self.use_graphql:
@@ -191,9 +188,6 @@ if not match_key:
 AZURE_SEARCH_KEY = match_key.group(1)
 
 
-# =========================
-# scoop API
-# =========================
 def from_scoop_sh(official: bool, count: int = 100000):
     session = Session()
 

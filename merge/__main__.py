@@ -92,7 +92,6 @@ def copy(args: tuple[Path, Path, Path, Bucket, bool, bool]) -> None:
 
     version: str = "unknown"
     content_json: dict[str, Any] | None = None
-    old_file_path = None
 
     try:
         content: bytes = src.read_bytes().replace(b"\r\n", b"\n").strip()
@@ -125,17 +124,12 @@ def copy(args: tuple[Path, Path, Path, Bucket, bool, bool]) -> None:
                 if status in (SemverStatus.GREATER, SemverStatus.EQUAL):
                     return
 
-            old_file_path: Path = info.path
-
             # 更新 metadata
             info.bucket = bucket
             info.version = version
             info.path = dst
 
     with file_lock:
-        if old_file_path:
-            old_file_path.unlink(True)
-
         rules: list[Rule] = DEFAULT_RULES[:]
 
         if not only_sync:
