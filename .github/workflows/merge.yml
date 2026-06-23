@@ -140,7 +140,6 @@ jobs:
           external_repository: Arama0517/scoop-bucket-x
           publish_branch: ${{ matrix.branch_name }}
           publish_dir: ./results
-          exclude_assets: ""
           user_name: "github-actions[bot]"
           user_email: "41898282+github-actions[bot]@users.noreply.github.com"
           full_commit_message: ${{ steps.init.outputs.commit_message }}
