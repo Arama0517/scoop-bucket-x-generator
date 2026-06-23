@@ -1,10 +1,8 @@
 import os
 import re
-import sqlite3
 import time
 from datetime import UTC, datetime
 from re import Match
-from sqlite3 import Cursor
 from typing import Any
 from urllib.parse import urljoin
 
@@ -12,11 +10,9 @@ import orjson
 import requests
 from requests import Response, Session
 
-from merge.config import CACHE_BUCKETS_FILE, CURRENT_DIR, Bucket
+from merge.config import CACHE_BUCKETS_FILE, Bucket
 
 buckets: dict[str, Bucket] = {}
-
-placehold_time: datetime = datetime.now(UTC)
 
 
 class GitHubClient:
@@ -154,20 +150,61 @@ class GitHubClient:
 
 client = GitHubClient(os.environ["GITHUB_TOKEN"])
 
+session = Session()
 
-with sqlite3.connect(CURRENT_DIR / "scoop_directory.db") as connect:
-    cursor: Cursor = connect.cursor()
-    cursor.execute("SELECT bucket_url, stars, updated FROM buckets")
+search_terms = [
+    "topic:scoop-bucket",
+    "scoop-bucket",
+    "scoop bucket",
+    "scoop",
+]
 
-    for url, stars, updated in cursor.fetchall():
-        updated = updated.replace("&#x2011;", "-")
+SLEEP_SECONDS = 60
+MAX_SLEEP_SECONDS = SLEEP_SECONDS * 64
 
-        buckets[Bucket.get_bucket_key(url)] = Bucket(
-            url,
-            stars,
-            datetime.strptime(updated, "%y-%m-%d").astimezone(UTC),
-        )
+for search in search_terms:
+    for page in range(1, 3):
+        sleep_seconds = SLEEP_SECONDS
+        while sleep_seconds <= MAX_SLEEP_SECONDS:
+            response = session.get(
+                "https://api.github.com/search/repositories",
+                params={
+                    "q": search,
+                    "per_page": 100,
+                    "page": page,
+                },
+                headers=client.headers(),
+                timeout=30,
+            )
 
+            # 422: reached 1,000 search limit
+            if response.status_code < 300 or response.status_code == 422:
+                break
+
+            if response.status_code == 403:
+                limit = int(response.headers["X-RateLimit-Limit"])
+                remaining = int(response.headers["X-RateLimit-Remaining"])
+                reset = int(response.headers["X-RateLimit-Reset"])
+                waitSeconds: int | float = float(reset) - time.time()
+                if remaining < 1 and waitSeconds > sleep_seconds:
+                    sleep_seconds: int | float = waitSeconds
+                time.sleep(sleep_seconds)
+                sleep_seconds: int | float = sleep_seconds * 2
+                continue
+
+        items = response.json().get("items", [])
+
+        for repo in items:
+            url = repo["html_url"]
+            buckets[Bucket.get_bucket_key(url)] = Bucket(
+                url,
+                repo["stargazers_count"],
+                datetime.strptime(repo["updated_at"], "%Y-%m-%dT%H:%M:%SZ").astimezone(
+                    UTC
+                ),
+            )
+
+placehold_time: datetime = datetime.now(UTC)
 
 base_url = "https://scoop.sh"
 response: Response = requests.get(f"{base_url}/#/apps", timeout=60)

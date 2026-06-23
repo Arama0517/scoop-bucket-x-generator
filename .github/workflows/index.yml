@@ -20,9 +20,6 @@ jobs:
       - name: Setup UV
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
 
-      - name: Download scoop-directory database
-        run: wget -O scoop_directory.db https://raw.githubusercontent.com/rasa/scoop-directory/refs/heads/master/scoop_directory.db
-
       - name: Index buckets
         run: uv run --no-dev -m index
         env:
