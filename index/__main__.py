@@ -3,7 +3,7 @@ import re
 import time
 from datetime import UTC, datetime
 from re import Match
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import urljoin
 
 import orjson
@@ -152,7 +152,7 @@ client = GitHubClient(os.environ["GITHUB_TOKEN"])
 
 session = Session()
 
-search_terms = [
+search_terms: list[str] = [
     "topic:scoop-bucket",
     "scoop-bucket",
     "scoop bucket",
@@ -160,11 +160,11 @@ search_terms = [
 ]
 
 SLEEP_SECONDS = 60
-MAX_SLEEP_SECONDS = SLEEP_SECONDS * 64
+MAX_SLEEP_SECONDS: Literal[3840] = SLEEP_SECONDS * 64
 
 for search in search_terms:
-    for page in range(1, 3):
-        sleep_seconds = SLEEP_SECONDS
+    for page in range(1, 8):
+        sleep_seconds: Literal[60] = SLEEP_SECONDS
         while sleep_seconds <= MAX_SLEEP_SECONDS:
             response = session.get(
                 "https://api.github.com/search/repositories",
