@@ -163,7 +163,7 @@ SLEEP_SECONDS = 60
 MAX_SLEEP_SECONDS: Literal[3840] = SLEEP_SECONDS * 64
 
 for search in search_terms:
-    for page in range(1, 8):
+    for page in range(1, 7):
         sleep_seconds: Literal[60] = SLEEP_SECONDS
         while sleep_seconds <= MAX_SLEEP_SECONDS:
             response = session.get(
