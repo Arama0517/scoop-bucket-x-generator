@@ -26,7 +26,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Save buckets index to cache
-        uses: actions/cache/save@v6.0.0
+        uses: actions/cache/save@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
         with:
           path: cache_buckets.json
           key: cache-${{ github.run_id }}
