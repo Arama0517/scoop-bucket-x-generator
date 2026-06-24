@@ -1,7 +1,7 @@
 import os
 import re
 import time
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from re import Match
 from typing import Any, Literal
 from urllib.parse import urljoin
@@ -204,7 +204,7 @@ for search in search_terms:
                 ),
             )
 
-placehold_time: datetime = datetime.now(UTC)
+placehold_time: datetime = datetime.now(UTC) + timedelta(days=365 * 20)
 
 base_url = "https://scoop.sh"
 response: Response = requests.get(f"{base_url}/#/apps", timeout=60)

@@ -7,9 +7,6 @@ concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-
 jobs:
   delete_runs:
     name: Delete old workflow runs
@@ -61,6 +58,8 @@ jobs:
     needs:
       - delete_cache
       - excavate
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -69,7 +68,7 @@ jobs:
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
 
       - name: Restore buckets index
-        uses: actions/cache/restore@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6
+        uses: actions/cache/restore@v6.0.0
         with:
           path: cache_buckets.json
           key: cache
@@ -79,7 +78,7 @@ jobs:
         run: uv run --no-dev -m download
 
       - name: Save cache
-        uses: actions/cache/save@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6
+        uses: actions/cache/save@v6.0.0
         with:
           path: cache/
           key: buckets-${{ github.run_id }}
@@ -90,6 +89,8 @@ jobs:
     needs:
       - excavate
       - download
+    permissions:
+      contents: read
     strategy:
       matrix:
         include:
@@ -105,14 +106,14 @@ jobs:
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
 
       - name: Restore buckets index
-        uses: actions/cache/restore@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6
+        uses: actions/cache/restore@v6.0.0
         with:
           path: cache_buckets.json
           key: cache
           restore-keys: cache
 
       - name: Restore cache
-        uses: actions/cache/restore@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6
+        uses: actions/cache/restore@v6.0.0
         with:
           path: cache/
           key: buckets-${{ github.run_id }}
