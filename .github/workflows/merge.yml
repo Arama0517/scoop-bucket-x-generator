@@ -24,20 +24,6 @@ jobs:
           delete_workflow_by_state_pattern: "ALL"
           delete_run_by_conclusion_pattern: "ALL"
 
-  delete_cache:
-    name: Delete old buckets cache
-    runs-on: ubuntu-latest
-    permissions:
-      actions: write
-    steps:
-      - name: Delete old buckets cache
-        run: |
-          gh cache list -R Arama0517/scoop-bucket-x-generator -k buckets --json id \
-            | jq -r '.[].id' \
-            | xargs -I {} gh cache delete {} -R Arama0517/scoop-bucket-x-generator
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   excavate:
     name: Excavate
     runs-on: windows-latest
@@ -55,9 +41,7 @@ jobs:
   download:
     name: Download buckets
     runs-on: ubuntu-latest
-    needs:
-      - delete_cache
-      - excavate
+    needs: excavate
     permissions:
       contents: read
     steps:
@@ -70,25 +54,24 @@ jobs:
       - name: Restore buckets index
         uses: actions/cache/restore@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
         with:
-          path: cache_buckets.json
-          key: cache
-          restore-keys: cache
+          path: index_buckets.json
+          key: index
+          restore-keys: index
 
       - name: Download buckets
         run: uv run --no-dev -m download
 
-      - name: Save cache
-        uses: actions/cache/save@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+      - name: Upload buckets
+        uses: actions/upload-artifact@v7
         with:
-          path: cache/
-          key: buckets-${{ github.run_id }}
+          name: buckets
+          path: buckets/
+          compression-level: 0
 
   merge:
     name: Merge buckets for ${{ matrix.branch_name }} branch
     runs-on: ubuntu-latest
-    needs:
-      - excavate
-      - download
+    needs: download
     permissions:
       contents: read
     strategy:
@@ -108,16 +91,15 @@ jobs:
       - name: Restore buckets index
         uses: actions/cache/restore@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
         with:
-          path: cache_buckets.json
-          key: cache
-          restore-keys: cache
+          path: index_buckets.json
+          key: index
+          restore-keys: index
 
-      - name: Restore cache
-        uses: actions/cache/restore@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+      - name: Download buckets
+        uses: actions/download-artifact@v8
         with:
-          path: cache/
-          key: buckets-${{ github.run_id }}
-          fail-on-cache-miss: true
+          name: buckets
+          path: buckets/
 
       - name: Merge buckets
         run: uv run --no-dev -m merge

@@ -10,7 +10,7 @@ import orjson
 import requests
 from requests import Response, Session
 
-from merge.config import CACHE_BUCKETS_FILE, Bucket
+from merge.config import INDEX_BUCKETS_FILE, Bucket
 
 buckets: dict[str, Bucket] = {}
 
@@ -314,4 +314,4 @@ for bucket in sorted(buckets.values(), key=lambda b: b.url, reverse=True):
         "updated_time": bucket.updated_time,
     })
 
-CACHE_BUCKETS_FILE.write_bytes(orjson.dumps(result))
+INDEX_BUCKETS_FILE.write_bytes(orjson.dumps(result))

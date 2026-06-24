@@ -7,10 +7,10 @@ from re import IGNORECASE, MULTILINE, Match, Pattern, compile
 import orjson
 
 CURRENT_DIR: Path = Path.cwd()
-CACHE_DIR: Path = CURRENT_DIR / "cache"
+BUCKETS_DIR: Path = CURRENT_DIR / "buckets"
 RESULTS_DIR: Path = CURRENT_DIR / "results"
 
-CACHE_BUCKETS_FILE: Path = CURRENT_DIR / "cache_buckets.json"
+INDEX_BUCKETS_FILE: Path = CURRENT_DIR / "index_buckets.json"
 
 GITHUB_URL: bytes = b"https://v4.gh-proxy.org"
 
@@ -53,7 +53,7 @@ class Bucket:
         object.__setattr__(
             self,
             "repo_dir",
-            CACHE_DIR / self.get_bucket_key(self.url).replace("/", "_"),
+            BUCKETS_DIR / self.get_bucket_key(self.url).replace("/", "_"),
         )
 
     @staticmethod
@@ -63,8 +63,8 @@ class Bucket:
 
 BUCKETS: list[Bucket] = []
 
-if CACHE_BUCKETS_FILE.exists():
-    cache_buckets = orjson.loads(CACHE_BUCKETS_FILE.read_bytes())
+if INDEX_BUCKETS_FILE.exists():
+    cache_buckets = orjson.loads(INDEX_BUCKETS_FILE.read_bytes())
     for bucket in cache_buckets:
         BUCKETS.append(
             Bucket(
@@ -142,13 +142,13 @@ NODEJS_RULES: list[Rule] = [
 
 __all__: list[str] = [
     "BUCKETS",
-    "CACHE_BUCKETS_FILE",
-    "CACHE_DIR",
+    "BUCKETS_DIR",
     "CURRENT_DIR",
     "DEFAULT_RULES",
     "GITHUB_RULES",
     "GITHUB_URL",
     "IGNORE_FILES_NAME",
+    "INDEX_BUCKETS_FILE",
     "INVALID_GITHUB_URL",
     "NODEJS_RULES",
     "PHP_RULES",
