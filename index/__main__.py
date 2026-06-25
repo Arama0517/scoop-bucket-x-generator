@@ -51,12 +51,7 @@ class GitHubClient:
                     data = response.json()
                     pages_total: int | float = int(data["total_count"]) / 100
 
-                    for item in data["items"]:
-                        response = self.session.get(f"{item['url']}/contents/bucket")
-                        if response.status_code == 404:
-                            continue
-                        yield item
-                        time.sleep(1)
+                    yield from data["items"]
                     break
             page += 1
             time.sleep(2)
