@@ -14,74 +14,12 @@ buckets: dict[str, Bucket] = {}
 class GitHubClient:
     session: Session
 
-    enable_rest: bool
-    enable_gql: bool
-    reset: int
-
     def __init__(self, token: str):
         self.session = Session()
         self.session.headers.update({
             "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github+json",
         })
-
-        self.enable_rest = True
-        self.enable_gql = True
-        self.reset = 0
-
-    def is_bucket(self, owner: str, repo: str):
-        for _ in range(3):
-            if self.enable_gql:
-                query = """
-                    query($owner: String!, $name: String!) {
-                    repository(owner: $owner, name: $name) {
-                        object(expression: "HEAD:bucket") {
-                        __typename
-                        }
-                    }
-                    }
-                """
-                response = self.session.post(
-                    "https://api.github.com/graphql",
-                    json={
-                        "query": query,
-                        "variables": {"owner": owner, "name": repo},
-                    },
-                )
-                self.reset = int(response.headers["X-RateLimit-Reset"])
-
-                if (
-                    response.status_code == 403
-                    and int(response.headers["X-RateLimit-Remaining"]) == 0
-                ):
-                    self.enable_gql = False
-                    continue
-
-                data = response.json()
-                return (
-                    data.get("data", {}).get("repository", {}).get("object") is not None
-                )
-
-            if self.enable_rest:
-                response = self.session.get(
-                    f"https://api.github.com/repos/{owner}/{repo}/contents/bucket"
-                )
-                self.reset = int(response.headers["X-RateLimit-Reset"])
-
-                if response.status_code == 404:
-                    return False
-
-                if (
-                    response.status_code == 403
-                    and int(response.headers["X-RateLimit-Remaining"]) == 0
-                ):
-                    self.enable_rest = False
-                    continue
-
-                if response.status_code in (200, 302):
-                    return True
-
-            time.sleep(self.reset - time.time() + 2)
 
     def get_enumerable(self, search: str):
         page = 1
@@ -113,9 +51,7 @@ class GitHubClient:
                     data = response.json()
                     pages_total: int | float = int(data["total_count"]) / 100
 
-                    for item in data["items"]:
-                        if self.is_bucket(item["owner"]["login"], item["name"]):
-                            yield item
+                    yield from data["items"]
                     break
             page += 1
             time.sleep(2)

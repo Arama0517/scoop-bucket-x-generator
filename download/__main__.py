@@ -56,7 +56,7 @@ def download(bucket: Bucket):
                     dst.write_bytes(z.read(name))
 
 
-with ThreadPoolExecutor(12) as executor:
+with ThreadPoolExecutor(16) as executor:
     futures: list[Future[None]] = []
     for bucket in BUCKETS:
         futures.append(executor.submit(download, bucket))
