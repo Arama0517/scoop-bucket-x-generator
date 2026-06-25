@@ -1,6 +1,9 @@
 import os
+import subprocess
 import time
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any
 
 import orjson
@@ -57,6 +60,62 @@ class GitHubClient:
             time.sleep(2)
 
 
+def has_bucket(repo_url: str) -> bool:
+    with TemporaryDirectory() as tmp:
+        try:
+            subprocess.run(
+                ["git", "init"],
+                cwd=tmp,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=True,
+            )
+
+            subprocess.run(
+                ["git", "remote", "add", "origin", repo_url],
+                cwd=tmp,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=True,
+            )
+
+            subprocess.run(
+                ["git", "sparse-checkout", "init", "--cone"],
+                cwd=tmp,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=True,
+            )
+
+            subprocess.run(
+                ["git", "sparse-checkout", "set", "bucket"],
+                cwd=tmp,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=True,
+            )
+
+            subprocess.run(
+                ["git", "fetch", "--depth", "1", "origin", "HEAD"],
+                cwd=tmp,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=True,
+            )
+
+            subprocess.run(
+                ["git", "checkout", "FETCH_HEAD"],
+                cwd=tmp,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=True,
+            )
+
+            return (Path(tmp) / "bucket").is_dir()
+        except subprocess.CalledProcessError:
+            return False
+
+
 # from https://github.com/ScoopInstaller/scoopinstaller.github.io-indexer/blob/main/src/ScoopSearch.Indexer/appsettings.json
 create_times: list[str] = ["created:<2020-01-01"]
 
@@ -86,6 +145,8 @@ client = GitHubClient(os.environ["GITHUB_TOKEN"])
 for search in search_terms:
     for repo in client.get_enumerable(search):
         url = repo["html_url"]
+        if not has_bucket(url):
+            continue
         buckets[Bucket.get_bucket_key(url)] = Bucket(
             url,
             repo["stargazers_count"],
