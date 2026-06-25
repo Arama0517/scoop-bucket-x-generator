@@ -1,9 +1,6 @@
 import os
-import subprocess
 import time
 from datetime import UTC, datetime, timedelta
-from subprocess import CompletedProcess
-from tempfile import TemporaryDirectory
 from typing import Any
 
 import orjson
@@ -17,12 +14,74 @@ buckets: dict[str, Bucket] = {}
 class GitHubClient:
     session: Session
 
+    enable_rest: bool
+    enable_gql: bool
+    reset: int
+
     def __init__(self, token: str):
         self.session = Session()
         self.session.headers.update({
             "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github+json",
         })
+
+        self.enable_rest = True
+        self.enable_gql = True
+        self.reset = 0
+
+    def is_bucket(self, owner: str, repo: str):
+        for _ in range(3):
+            if self.enable_gql:
+                query = """
+                    query($owner: String!, $name: String!) {
+                    repository(owner: $owner, name: $name) {
+                        object(expression: "HEAD:bucket") {
+                        __typename
+                        }
+                    }
+                    }
+                """
+                response = self.session.post(
+                    "https://api.github.com/graphql",
+                    json={
+                        "query": query,
+                        "variables": {"owner": owner, "name": repo},
+                    },
+                )
+                self.reset = int(response.headers["X-RateLimit-Reset"])
+
+                if (
+                    response.status_code == 403
+                    and int(response.headers["X-RateLimit-Remaining"]) == 0
+                ):
+                    self.enable_gql = False
+                    continue
+
+                data = response.json()
+                return (
+                    data.get("data", {}).get("repository", {}).get("object") is not None
+                )
+
+            if self.enable_rest:
+                response = self.session.get(
+                    f"https://api.github.com/repos/{owner}/{repo}/contents/bucket"
+                )
+                self.reset = int(response.headers["X-RateLimit-Reset"])
+
+                if response.status_code == 404:
+                    return False
+
+                if (
+                    response.status_code == 403
+                    and int(response.headers["X-RateLimit-Remaining"]) == 0
+                ):
+                    self.enable_rest = False
+                    continue
+
+                if response.status_code in (200, 302):
+                    return True
+
+            time.sleep(self.reset - time.time() + 2)
 
     def get_enumerable(self, search: str):
         page = 1
@@ -54,49 +113,12 @@ class GitHubClient:
                     data = response.json()
                     pages_total: int | float = int(data["total_count"]) / 100
 
-                    yield from data["items"]
+                    for item in data["items"]:
+                        if self.is_bucket(item["owner"]["login"], item["name"]):
+                            yield item
                     break
             page += 1
             time.sleep(2)
-
-
-def has_bucket(repo_url: str) -> bool:
-    with TemporaryDirectory() as tmp:
-        try:
-            subprocess.run(
-                ["git", "init", "--bare"],
-                cwd=tmp,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                check=True,
-            )
-
-            subprocess.run(
-                [
-                    "git",
-                    "fetch",
-                    "--depth=1",
-                    "--filter=blob:none",
-                    repo_url,
-                    "HEAD",
-                ],
-                cwd=tmp,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                check=True,
-            )
-
-            result: CompletedProcess[str] = subprocess.run(
-                ["git", "ls-tree", "FETCH_HEAD", "bucket"],
-                cwd=tmp,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-                text=True,
-            )
-
-            return bool(result.stdout.strip())
-        except subprocess.CalledProcessError:
-            return False
 
 
 # from https://github.com/ScoopInstaller/scoopinstaller.github.io-indexer/blob/main/src/ScoopSearch.Indexer/appsettings.json
@@ -128,8 +150,6 @@ client = GitHubClient(os.environ["GITHUB_TOKEN"])
 for search in search_terms:
     for repo in client.get_enumerable(search):
         url = repo["html_url"]
-        if not has_bucket(url):
-            continue
         buckets[Bucket.get_bucket_key(url)] = Bucket(
             url,
             repo["stargazers_count"],
