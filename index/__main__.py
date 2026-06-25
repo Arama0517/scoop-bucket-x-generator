@@ -2,7 +2,7 @@ import os
 import subprocess
 import time
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
+from subprocess import CompletedProcess
 from tempfile import TemporaryDirectory
 from typing import Any
 
@@ -64,7 +64,7 @@ def has_bucket(repo_url: str) -> bool:
     with TemporaryDirectory() as tmp:
         try:
             subprocess.run(
-                ["git", "init"],
+                ["git", "init", "--bare"],
                 cwd=tmp,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
@@ -72,46 +72,22 @@ def has_bucket(repo_url: str) -> bool:
             )
 
             subprocess.run(
-                ["git", "remote", "add", "origin", repo_url],
+                ["git", "fetch", "--depth", "1", repo_url, "HEAD"],
                 cwd=tmp,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 check=True,
             )
 
-            subprocess.run(
-                ["git", "sparse-checkout", "init", "--cone"],
+            result: CompletedProcess[str] = subprocess.run(
+                ["git", "ls-tree", "FETCH_HEAD", "bucket"],
                 cwd=tmp,
-                stdout=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
-                check=True,
+                text=True,
             )
 
-            subprocess.run(
-                ["git", "sparse-checkout", "set", "bucket"],
-                cwd=tmp,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                check=True,
-            )
-
-            subprocess.run(
-                ["git", "fetch", "--depth", "1", "origin", "HEAD"],
-                cwd=tmp,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                check=True,
-            )
-
-            subprocess.run(
-                ["git", "checkout", "FETCH_HEAD"],
-                cwd=tmp,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                check=True,
-            )
-
-            return (Path(tmp) / "bucket").is_dir()
+            return bool(result.stdout.strip())
         except subprocess.CalledProcessError:
             return False
 
