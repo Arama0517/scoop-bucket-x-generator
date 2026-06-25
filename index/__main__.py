@@ -38,6 +38,7 @@ class GitHubClient:
                 )
 
                 if response.status_code == 403:
+                    print("rate limit")
                     time.sleep(
                         int(response.headers["X-RateLimit-Reset"]) - time.time() + 2
                     )
@@ -45,12 +46,14 @@ class GitHubClient:
 
                 # Only the first 1000 search results are available
                 if response.status_code == 422:
+                    print("1000 limit")
                     return
 
                 if response.status_code == 200:
                     data = response.json()
                     pages_total: int | float = int(data["total_count"]) / 100
 
+                    print(f"done, pages_total={pages_total}")
                     yield from data["items"]
                     break
             page += 1
@@ -78,6 +81,7 @@ search_terms: list[str] = ["topic:scoop-bucket"]
 for create_time in create_times:
     search_terms.append(f"scoop-bucket {create_time}")
     search_terms.append(f"scoop bucket {create_time}")
+    search_terms.append(f"scoop {create_time}")
 
 
 client = GitHubClient(os.environ["GITHUB_TOKEN"])
