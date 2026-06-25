@@ -38,7 +38,6 @@ class GitHubClient:
                 )
 
                 if response.status_code == 403:
-                    print("rate limit")
                     time.sleep(
                         int(response.headers["X-RateLimit-Reset"]) - time.time() + 2
                     )
@@ -46,15 +45,18 @@ class GitHubClient:
 
                 # Only the first 1000 search results are available
                 if response.status_code == 422:
-                    print("1000 limit")
                     return
 
                 if response.status_code == 200:
                     data = response.json()
                     pages_total: int | float = int(data["total_count"]) / 100
 
-                    print(f"done, pages_total={pages_total}")
-                    yield from data["items"]
+                    for item in data["items"]:
+                        response = self.session.get(f"{item['url']}/contents/bucket")
+                        if response.status_code == 404:
+                            continue
+                        yield item
+                        time.sleep(1)
                     break
             page += 1
             time.sleep(2)
