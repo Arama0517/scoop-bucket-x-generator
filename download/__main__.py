@@ -1,5 +1,4 @@
 import contextlib
-import io
 import zipfile
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -21,7 +20,7 @@ session.mount("http://", adapter)
 def download(bucket: Bucket):
     with contextlib.suppress(Exception):
         response: Response = session.get(
-            bucket.url.rstrip("/") + "/archive/HEAD.zip", timeout=60
+            bucket.url.rstrip("/") + "/archive/HEAD.zip", stream=True, timeout=60
         )
         if response.status_code != 200:
             return
@@ -33,26 +32,28 @@ def download(bucket: Bucket):
 
             tmp.seek(0)
 
-            z = zipfile.ZipFile(io.BytesIO(response.content))
-            names: list[str] = z.namelist()
-            root: str = names[0].split("/", 1)[0] + "/"
+            with zipfile.ZipFile(tmp) as z:
+                names: list[str] = z.namelist()
+                root: str = names[0].split("/", 1)[0] + "/"
 
-            bucket.repo_dir.mkdir(parents=True, exist_ok=True)
+                bucket.repo_dir.mkdir(parents=True, exist_ok=True)
 
-            for name in names:
-                if not name.startswith(root):
-                    continue
+                for name in names:
+                    if not name.startswith(root):
+                        continue
 
-                rel: str = name[len(root) :]
-                if not rel or name.endswith("/"):
-                    continue
+                    rel: str = name[len(root) :]
+                    if not rel or name.endswith("/"):
+                        continue
 
-                if not any(rel == d or rel.startswith(d + "/") for d in SYNC_DIRS_NAME):
-                    continue
+                    if not any(
+                        rel == d or rel.startswith(d + "/") for d in SYNC_DIRS_NAME
+                    ):
+                        continue
 
-                dst: Path = bucket.repo_dir / rel
-                dst.parent.mkdir(parents=True, exist_ok=True)
-                dst.write_bytes(z.read(name))
+                    dst: Path = bucket.repo_dir / rel
+                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    dst.write_bytes(z.read(name))
 
 
 with ThreadPoolExecutor(12) as executor:
