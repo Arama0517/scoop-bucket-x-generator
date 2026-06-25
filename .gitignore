@@ -167,8 +167,6 @@ cython_debug/
 ._*
 page.html
 checkver-*.html
+/index_buckets.json
+/buckets
 /results
-/cache
-/proxy_results
-/scoop_directory.db
-/cache_buckets.json

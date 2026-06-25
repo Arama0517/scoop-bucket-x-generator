@@ -38,6 +38,15 @@ class SemverStatus(IntEnum):
     LESS = -1  # a < b
 
 
+def to_num(s: str) -> int:
+    if not s or s.strip() == "":
+        return 0
+    try:
+        return int(s)
+    except ValueError:
+        return 0
+
+
 def semver_compare(old: str, new: str) -> SemverStatus:
     old: str = VERSION_PATTERN.sub("", str(old or "").replace("-", "."))
     new: str = VERSION_PATTERN.sub("", str(new or "").replace("-", "."))
@@ -45,14 +54,6 @@ def semver_compare(old: str, new: str) -> SemverStatus:
     old_segments, new_segments = old.split("."), new.split(".")
 
     count: int = max(len(old_segments), len(new_segments), 3)
-
-    def to_num(s: str) -> int:
-        if not s or s.strip() == "":
-            return 0
-        try:
-            return int(s)
-        except ValueError:
-            return 0
 
     for i in range(count):
         old_num: int = to_num(s=old_segments[i]) if i < len(old_segments) else 0
