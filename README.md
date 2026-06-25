@@ -4,6 +4,12 @@
 
 ## 使用方法
 
+### 删除 `main` 仓库
+
+```powershell
+scoop bucket rm main
+```
+
 ### 添加本仓库
 
 > [!NOTE]
@@ -14,13 +20,13 @@
 (推荐) 使用镜像加速下载和更新的速度:
 
 ```powershell
-scoop bucket add sbx https://v4.gh-proxy.org/https://github.com/Arama0517/scoop-bucket-x.git
+scoop bucket add main https://v4.gh-proxy.org/https://github.com/Arama0517/scoop-bucket-x.git
 ```
 
 (如果你无法使用上面的命令) 无镜像:
 
 ```powershell
-scoop bucket add sbx https://github.com/Arama0517/scoop-bucket-x.git
+scoop bucket add main https://github.com/Arama0517/scoop-bucket-x.git
 ```
 
 ### (可选) 更换分支
