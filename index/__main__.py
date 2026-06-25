@@ -72,7 +72,14 @@ def has_bucket(repo_url: str) -> bool:
             )
 
             subprocess.run(
-                ["git", "fetch", "--depth", "1", repo_url, "HEAD"],
+                [
+                    "git",
+                    "fetch",
+                    "--depth=1",
+                    "--filter=blob:none",
+                    repo_url,
+                    "HEAD",
+                ],
                 cwd=tmp,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
