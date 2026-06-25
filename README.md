@@ -15,7 +15,7 @@ scoop bucket rm main
 > [!NOTE]
 > 默认为 `bucket` 分支, 此分支没有替换下载链接为镜像
 >
-> 如果你使用的是官方 [scoop](https://scoop.sh) 或者没有在安装 App 替换镜像功能的 `scoop` 请运行 [步骤2](#可选-更换分支) 的命令
+> 如果你安装的 [scoop](https://scoop.sh) 是 [scoop国内镜像优化库](https://gitee.com/scoop-installer/scoop) 也请使用镜像加速
 
 (推荐) 使用镜像加速下载和更新的速度:
 
@@ -38,7 +38,7 @@ scoop bucket add main https://github.com/Arama0517/scoop-bucket-x.git
 
 ```powershell
 $path = if ($env:SCOOP) { $env:SCOOP } else { "$env:USERPROFILE\scoop" }
-cd $path\buckets\sbx
+cd $path\buckets\main
 git fetch --all && git switch proxy_bucket
 ```
 
@@ -46,10 +46,15 @@ git fetch --all && git switch proxy_bucket
 
 ```powershell
 $path = if ($env:SCOOP) { $env:SCOOP } else { "$env:USERPROFILE\scoop" }
+
+# 备份
+scoop export > $path\source_backup.json
+
+# 替换
 Get-ChildItem $path\apps\*\current\install.json -Recurse |
   ForEach-Object {
     $j = Get-Content $_ -Raw | ConvertFrom-Json
-    $j.bucket = "sbx"
+    $j.bucket = "main"
     $j | ConvertTo-Json -Depth 10 | Set-Content $_
   }
 scoop update && scoop update *
@@ -83,6 +88,20 @@ scoop install scoop-search -s
 
 ```powershell
 scoop config aria2-enabled false
+```
+
+### 撤回 [步骤4](#可选-将已安装应用的上游替换为本仓库)
+
+```powershell
+$path = if ($env:SCOOP) { $env:SCOOP } else { "$env:USERPROFILE\scoop" }
+$json = Get-Content "$path\source_backup.json" -Raw | ConvertFrom-Json
+
+foreach ($app in $json.apps) {
+    $f = "$path\apps\$($app.Name)\current\install.json"
+    $j = Get-Content $f -Raw | ConvertFrom-Json
+    $j.bucket = $app.Source
+    $j | ConvertTo-Json -Depth 10 | Set-Content $f
+}
 ```
 
 ## 灵感来源
