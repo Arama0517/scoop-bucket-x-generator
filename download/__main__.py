@@ -1,8 +1,9 @@
 import contextlib
-import zipfile
-from concurrent.futures import Future, ThreadPoolExecutor, as_completed
+import shutil
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from tempfile import SpooledTemporaryFile
+from zipfile import ZipFile, ZipInfo
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -32,18 +33,16 @@ def download(bucket: Bucket):
 
             tmp.seek(0)
 
-            with zipfile.ZipFile(tmp) as z:
-                names: list[str] = z.namelist()
-                root: str = names[0].split("/", 1)[0] + "/"
+            with ZipFile(tmp) as z:
+                infos: list[ZipInfo] = z.infolist()
+                root: str = infos[0].filename.split("/", 1)[0] + "/"
 
-                bucket.repo_dir.mkdir(parents=True, exist_ok=True)
+                if not any(i.filename.startswith(f"{root}bucket/") for i in infos):
+                    return
 
-                for name in names:
-                    if not name.startswith(root):
-                        continue
-
-                    rel: str = name[len(root) :]
-                    if not rel or name.endswith("/"):
+                for info in infos:
+                    rel: str = info.filename[len(root) :]
+                    if not rel or info.filename.endswith("/"):
                         continue
 
                     if not any(
@@ -53,13 +52,9 @@ def download(bucket: Bucket):
 
                     dst: Path = bucket.repo_dir / rel
                     dst.parent.mkdir(parents=True, exist_ok=True)
-                    dst.write_bytes(z.read(name))
+                    with z.open(info) as src_f, dst.open("wb") as f:
+                        shutil.copyfileobj(src_f, f, length=1024 * 1024)
 
 
 with ThreadPoolExecutor(16) as executor:
-    futures: list[Future[None]] = []
-    for bucket in BUCKETS:
-        futures.append(executor.submit(download, bucket))
-
-    for future in as_completed(futures):
-        future.result()
+    list(executor.map(download, BUCKETS))
