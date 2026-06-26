@@ -33,13 +33,14 @@ def unzip(data: bytes) -> Iterator[tuple[bytes, str]]:
 
 async def download(bucket: Bucket, session: aiohttp.ClientSession) -> None:
     async with semaphore:
-        async with (
-            session.get(bucket.url.rstrip("/") + "/archive/HEAD.zip") as response,
-        ):
+        async with session.get(
+            bucket.url.rstrip("/") + "/archive/HEAD.zip"
+        ) as response:
             if response.status != 200:
                 return
             data: bytes = await response.read()
-
+            if not data.startswith(b"PK\x03\x04"):
+                return
         for raw, rel in await asyncio.to_thread(unzip, data):
             dst: Path = bucket.repo_dir / rel
             dst.parent.mkdir(parents=True, exist_ok=True)
