@@ -114,13 +114,17 @@ def copy(args: tuple[Path, Path, Path, Bucket, bool, bool]) -> None:
             keep_files[key] = info
         else:
             file_lock: lock = info.file_lock
-            if (
-                info.bucket.stars > bucket.stars
-                or info.bucket.updated_time > bucket.updated_time
+            if not (
+                bucket.stars > info.bucket.stars
+                and bucket.updated_time > info.bucket.updated_time
             ):
                 return
 
-            if is_manifest and info.bucket.stars == bucket.stars:
+            if (
+                is_manifest
+                and info.bucket.stars == bucket.stars
+                and info.bucket.updated_time == bucket.updated_time
+            ):
                 status: SemverStatus = semver_compare(info.version, version)
                 if status in (SemverStatus.GREATER, SemverStatus.EQUAL):
                     return

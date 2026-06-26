@@ -118,7 +118,7 @@ for url, stars in predefine_buckets.items():
 
 result: list[dict[str, Any]] = []
 
-for bucket in sorted(buckets.values(), key=lambda b: b.stars, reverse=True):
+for bucket in sorted(buckets.values(), key=lambda b: b.url):
     result.append({
         "url": bucket.url,
         "stars": bucket.stars,
