@@ -86,6 +86,10 @@ client = GitHubClient(os.environ["GITHUB_TOKEN"])
 for search in search_terms:
     for repo in client.get_enumerable(search):
         url = repo["html_url"]
+
+        if repo["name"] == "scoop-proxy-cn":
+            repo["stargazers_count"] = -90000
+
         buckets[Bucket.get_bucket_key(url)] = Bucket(
             url,
             repo["stargazers_count"],
@@ -100,7 +104,7 @@ predefine_buckets: dict[str, int] = {
     "https://github.com/anderlli0053/DEV-tools": -60000,
     "https://github.com/kkzzhizhou/scoop-apps": -70000,
     "https://github.com/cmontage/scoopbucket-third": -80000,
-    "https://github.com/lzwme/scoop-proxy-cn": -90000,
+    # "https://github.com/lzwme/scoop-proxy-cn": -90000,
     "https://github.com/okibcn/ScoopMaster": -100000,
 }
 
