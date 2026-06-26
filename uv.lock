@@ -354,8 +354,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiofiles", specifier = ">=25.1.0" },
-    { name = "aiohttp", specifier = ">=3.14.1" },
+    { name = "aiofiles", specifier = "==25.1.0" },
+    { name = "aiohttp", specifier = "==3.14.1" },
     { name = "orjson", specifier = "==3.11.9" },
     { name = "requests", specifier = "==2.34.2" },
 ]
@@ -363,7 +363,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "python-dotenv", specifier = "==1.2.2" },
-    { name = "types-aiofiles", specifier = ">=25.1.0.20260518" },
+    { name = "types-aiofiles", specifier = "==25.1.0.20260518" },
     { name = "types-requests", specifier = "==2.33.0.20260518" },
 ]
 
