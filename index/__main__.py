@@ -104,14 +104,13 @@ predefine_buckets: dict[str, int] = {
     "https://github.com/okibcn/ScoopMaster": -100000,
 }
 
-for url, stars in predefine_buckets.items():
-    buckets[Bucket.get_bucket_key(url)] = Bucket(url, stars, placehold_time)
-
 buckets.pop(
     Bucket.get_bucket_key("https://github.com/Arama0517/scoop-bucket-x"),
     None,
 )
 
+for url, stars in predefine_buckets.items():
+    buckets[Bucket.get_bucket_key(url)] = Bucket(url, stars, placehold_time)
 
 result: list[dict[str, Any]] = []
 

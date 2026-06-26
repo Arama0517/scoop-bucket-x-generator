@@ -51,7 +51,12 @@ async def download(bucket: Bucket, session: aiohttp.ClientSession) -> None:
 
 async def main():
     async with aiohttp.ClientSession() as session:
-        tasks = [asyncio.create_task(download(b, session)) for b in BUCKETS]
+        tasks = []
+        for b in BUCKETS:
+            if b.url == "https://github.com/Arama0517/scoop-bucket-x-generator":
+                continue
+            tasks.append(asyncio.create_task(download(b, session)))
+            # tasks = [asyncio.create_task(download(b, session))]
         await asyncio.gather(*tasks)
 
 
