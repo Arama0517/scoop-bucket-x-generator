@@ -115,7 +115,7 @@ buckets.pop(
 
 result: list[dict[str, Any]] = []
 
-for bucket in sorted(buckets.values(), key=lambda b: b.url, reverse=True):
+for bucket in sorted(buckets.values(), key=lambda b: b.stars, reverse=True):
     result.append({
         "url": bucket.url,
         "stars": bucket.stars,
