@@ -1,8 +1,9 @@
 import asyncio
+from _asyncio import Task
 from collections.abc import Iterator
 from io import BytesIO
 from pathlib import Path
-from zipfile import ZipFile
+from zipfile import ZipFile, ZipInfo
 
 import aiofiles
 import aiohttp
@@ -14,11 +15,8 @@ semaphore = asyncio.Semaphore(24)
 
 def unzip(data: bytes) -> Iterator[tuple[bytes, str]]:
     with ZipFile(BytesIO(data)) as z:
-        infos = z.infolist()
-        root = infos[0].filename.split("/", 1)[0] + "/"
-
-        if not any(i.filename.startswith(f"{root}bucket/") for i in infos):
-            return
+        infos: list[ZipInfo] = z.infolist()
+        root: str = infos[0].filename.split("/", 1)[0] + "/"
 
         for info in infos:
             rel: str = info.filename[len(root) :]
@@ -51,12 +49,11 @@ async def download(bucket: Bucket, session: aiohttp.ClientSession) -> None:
 
 async def main():
     async with aiohttp.ClientSession() as session:
-        tasks = []
+        tasks: list[Task[None]] = []
         for b in BUCKETS:
             if b.url == "https://github.com/Arama0517/scoop-bucket-x-generator":
                 continue
             tasks.append(asyncio.create_task(download(b, session)))
-            # tasks = [asyncio.create_task(download(b, session))]
         await asyncio.gather(*tasks)
 
 

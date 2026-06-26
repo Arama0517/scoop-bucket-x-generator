@@ -1,7 +1,10 @@
 import os
+import subprocess
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from subprocess import CompletedProcess
+from tempfile import TemporaryDirectory
 
 import orjson
 from requests import Response, Session
@@ -74,8 +77,11 @@ else:
 
 create_times.reverse()
 
-search_terms: list[str] = ["topic:scoop-bucket"]
+search_terms: list[str] = []
 for create_time in create_times:
+    search_terms.append(f"topic:scoop {create_time}")
+    search_terms.append(f"topic:scoop-apps {create_time}")
+    search_terms.append(f"topic:scoop-bucket {create_time}")
     search_terms.append(f"scoop-bucket {create_time}")
     search_terms.append(f"scoop bucket {create_time}")
     search_terms.append(f"scoop {create_time}")
@@ -116,13 +122,55 @@ buckets.pop(
 for url, stars in predefine_buckets.items():
     buckets[Bucket.get_bucket_key(url)] = Bucket(url, stars, placehold_time)
 
-result: list[dict[str, Any]] = []
 
-for bucket in sorted(buckets.values(), key=lambda b: b.url):
-    result.append({
-        "url": bucket.url,
-        "stars": bucket.stars,
-        "updated_time": bucket.updated_time,
-    })
+def is_valid(bucket: Bucket) -> tuple[Bucket, bool]:
+    with TemporaryDirectory() as tmp:
+        try:
+            subprocess.run(
+                ["git", "init", "--bare"],
+                cwd=tmp,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=True,
+            )
 
-INDEX_BUCKETS_FILE.write_bytes(orjson.dumps(result))
+            subprocess.run(
+                [
+                    "git",
+                    "fetch",
+                    "--depth=1",
+                    "--filter=blob:none",
+                    bucket.url,
+                    "HEAD",
+                ],
+                cwd=tmp,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=True,
+            )
+
+            result: CompletedProcess[str] = subprocess.run(
+                ["git", "ls-tree", "FETCH_HEAD", "bucket"],
+                cwd=tmp,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+            )
+
+            return bucket, bool(result.stdout.strip())
+        except subprocess.CalledProcessError:
+            return bucket, False
+
+
+with ThreadPoolExecutor(16) as executor:
+    results: list[dict[str, str | int | datetime]] = []
+    for bucket, valid in executor.map(is_valid, buckets.values()):
+        if not valid:
+            continue
+        results.append({
+            "url": bucket.url,
+            "stars": bucket.stars,
+            "updated_time": bucket.updated_time,
+        })
+
+INDEX_BUCKETS_FILE.write_bytes(orjson.dumps(sorted(results, key=lambda b: b.url)))

@@ -197,7 +197,7 @@ def main() -> None:
             need_work_dirs.append((bucket.repo_dir / sync_dir_name, bucket))
 
     only_sync = bool(int(os.environ["ONLY_SYNC"]))
-    with ThreadPoolExecutor(max_workers=12) as executor:
+    with ThreadPoolExecutor(12) as executor:
         futures: list[Future[None]] = []
         for sync_dir, bucket in need_work_dirs:
             for src in sync_dir.rglob("*"):
