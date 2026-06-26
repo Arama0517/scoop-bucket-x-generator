@@ -173,4 +173,4 @@ with ThreadPoolExecutor(16) as executor:
             "updated_time": bucket.updated_time,
         })
 
-INDEX_BUCKETS_FILE.write_bytes(orjson.dumps(sorted(results, key=lambda b: b.url)))
+INDEX_BUCKETS_FILE.write_bytes(orjson.dumps(sorted(results, key=lambda b: b["url"])))
