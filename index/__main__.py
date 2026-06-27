@@ -166,4 +166,4 @@ with ThreadPoolExecutor(16) as executor:
             "stars": bucket.stars,
         })
 
-INDEX_BUCKETS_FILE.write_bytes(orjson.dumps(sorted(results, key=lambda b: b["url"])))
+INDEX_BUCKETS_FILE.write_bytes(orjson.dumps(sorted(results, key=lambda b: b["stars"])))
