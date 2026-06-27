@@ -16,6 +16,7 @@ GITHUB_URL: bytes = b"https://v4.gh-proxy.org"
 INVALID_GITHUB_URL: list[bytes] = [
     b"https://ghfast.top",
     b"https://ghproxy.com",
+    b"https://gh-proxy.com",
     b"https://ghproxy.net",
     b"https://mirror.ghproxy.com",
     b"https://ghp.ci",
