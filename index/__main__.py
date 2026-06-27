@@ -2,7 +2,7 @@ import os
 import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from subprocess import CompletedProcess
 from tempfile import TemporaryDirectory
 
@@ -96,13 +96,7 @@ for search in search_terms:
         if repo["name"] == "scoop-proxy-cn":
             repo["stargazers_count"] = -90000
 
-        buckets[Bucket.get_bucket_key(url)] = Bucket(
-            url,
-            repo["stargazers_count"],
-            datetime.strptime(repo["updated_at"], "%Y-%m-%dT%H:%M:%SZ").astimezone(UTC),
-        )
-
-placehold_time: datetime = datetime.now(UTC) + timedelta(days=365 * 20)
+        buckets[Bucket.get_bucket_key(url)] = Bucket(url, repo["stargazers_count"])
 
 
 predefine_buckets: dict[str, int] = {
@@ -120,7 +114,7 @@ buckets.pop(
 )
 
 for url, stars in predefine_buckets.items():
-    buckets[Bucket.get_bucket_key(url)] = Bucket(url, stars, placehold_time)
+    buckets[Bucket.get_bucket_key(url)] = Bucket(url, stars)
 
 
 def is_valid(bucket: Bucket) -> tuple[Bucket, bool]:
@@ -170,7 +164,6 @@ with ThreadPoolExecutor(16) as executor:
         results.append({
             "url": bucket.url,
             "stars": bucket.stars,
-            "updated_time": bucket.updated_time,
         })
 
 INDEX_BUCKETS_FILE.write_bytes(orjson.dumps(sorted(results, key=lambda b: b["url"])))
