@@ -7,7 +7,7 @@ from enum import IntEnum
 from pathlib import Path
 from re import Pattern
 from threading import Lock
-from typing import Any
+from typing import Any, overload
 
 import orjson
 from orjson import (
@@ -38,7 +38,7 @@ class SemverStatus(IntEnum):
     LESS = -1  # a < b
 
 
-def to_num(s: str) -> int:
+def str2int(s: str) -> int:
     if not s or s.strip() == "":
         return 0
     try:
@@ -56,8 +56,8 @@ def semver_compare(old: str, new: str) -> SemverStatus:
     count: int = max(len(old_segments), len(new_segments), 3)
 
     for i in range(count):
-        old_num: int = to_num(s=old_segments[i]) if i < len(old_segments) else 0
-        new_num: int = to_num(s=new_segments[i]) if i < len(new_segments) else 0
+        old_num: int = str2int(s=old_segments[i]) if i < len(old_segments) else 0
+        new_num: int = str2int(s=new_segments[i]) if i < len(new_segments) else 0
 
         if old_num > new_num:
             return SemverStatus.GREATER
@@ -78,13 +78,27 @@ keep_files: dict[Path, FileInfo] = {}
 keep_files_lock: lock = Lock()
 
 
-def fix_depends(val: str | list[str]) -> Any:
+@overload
+def fix_depends(val: str) -> str: ...
+
+
+@overload
+def fix_depends(val: list[str]) -> list[str]: ...
+
+
+@overload
+def fix_depends(val: dict[str, str]) -> dict[str, str]: ...
+
+
+def fix_depends(
+    val: str | list[str] | dict[str, str],
+) -> str | list[str] | dict[str, str]:
     if isinstance(val, str) and "/" in val:
         return "main/" + val.split("/", 1)[1]
-    if isinstance(val, list):
-        return [
-            "main/" + item.split("/", 1)[1] if "/" in item else item for item in val
-        ]
+    elif isinstance(val, list):
+        return [fix_depends(item) for item in val]
+    elif isinstance(val, dict):
+        return {k: fix_depends(v) for k, v in val.items()}
     return val
 
 
@@ -153,20 +167,10 @@ def copy(args: tuple[Path, Path, Path, Bucket, bool, bool]) -> None:
             result_json["from"] = bucket.url
 
             if "depends" in content_json:
-                raw_depends: str | list[str] = content_json["depends"]
-                depends: list[str] = (
-                    [raw_depends] if isinstance(raw_depends, str) else list(raw_depends)
-                )
-                result_json["depends"] = [fix_depends(d) for d in depends]
+                result_json["depends"] = fix_depends(content_json["depends"])
 
             if "suggest" in content_json:
-                suggest: str | dict[str, str] = content_json["suggest"]
-                if isinstance(suggest, dict):
-                    result_json["suggest"] = {
-                        k: fix_depends(v) for k, v in suggest.items()
-                    }
-                elif isinstance(suggest, str):
-                    result_json["suggest"] = fix_depends(suggest)
+                result_json["suggest"] = fix_depends(content_json["suggest"])
 
             if "homepage" in content_json:
                 result_json["homepage"] = content_json["homepage"]
