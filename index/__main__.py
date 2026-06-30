@@ -82,6 +82,8 @@ for create_time in create_times:
     search_terms.append(f"topic:scoop {create_time}")
     search_terms.append(f"topic:scoop-apps {create_time}")
     search_terms.append(f"topic:scoop-bucket {create_time}")
+    search_terms.append(f"scoop-apps {create_time}")
+    search_terms.append(f"scoop apps {create_time}")
     search_terms.append(f"scoop-bucket {create_time}")
     search_terms.append(f"scoop bucket {create_time}")
     search_terms.append(f"scoop {create_time}")
