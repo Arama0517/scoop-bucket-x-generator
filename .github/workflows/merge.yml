@@ -49,8 +49,13 @@ jobs:
         with:
           name: buckets
           path: buckets/
+          retention-days: 1
           compression-level: 0
           include-hidden-files: true
+          if-no-files-found: error
+
+      - name: Sleep
+        run: sleep 10
 
   merge:
     name: Merge buckets for ${{ matrix.branch_name }} branch
