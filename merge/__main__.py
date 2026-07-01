@@ -86,19 +86,11 @@ def fix_depends(val: str) -> str: ...
 def fix_depends(val: list[str]) -> list[str]: ...
 
 
-@overload
-def fix_depends(val: dict[str, str]) -> dict[str, str]: ...
-
-
-def fix_depends(
-    val: str | list[str] | dict[str, str],
-) -> str | list[str] | dict[str, str]:
+def fix_depends(val: str | list[str]) -> str | list[str]:
     if isinstance(val, str) and "/" in val:
         return "main/" + val.split("/", 1)[1]
     elif isinstance(val, list):
         return [fix_depends(item) for item in val]
-    elif isinstance(val, dict):
-        return {k: fix_depends(v) for k, v in val.items()}
     return val
 
 
@@ -169,8 +161,15 @@ def copy(args: tuple[Path, Path, Path, Bucket, bool, bool]) -> None:
             if "depends" in content_json:
                 result_json["depends"] = fix_depends(content_json["depends"])
 
+            # 有可能会是这样的: "suggest":{"JDK":["main/oraclejdk","main/openjdk"]}
             if "suggest" in content_json:
-                result_json["suggest"] = fix_depends(content_json["suggest"])
+                suggest = content_json["suggest"]
+                if isinstance(suggest, dict):
+                    result_json["suggest"] = {
+                        fix_depends(k): v for k, v in suggest.items()
+                    }
+                elif isinstance(suggest, str):
+                    result_json["suggest"] = fix_depends(suggest)
 
             if "homepage" in content_json:
                 result_json["homepage"] = content_json["homepage"]
