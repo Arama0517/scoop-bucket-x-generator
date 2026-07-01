@@ -77,17 +77,20 @@ else:
 
 create_times.reverse()
 
-search_terms: list[str] = []
-for create_time in create_times:
-    search_terms.append(f"topic:scoop {create_time}")
-    search_terms.append(f"topic:scoop-apps {create_time}")
-    search_terms.append(f"topic:scoop-bucket {create_time}")
-    search_terms.append(f"scoop-apps {create_time}")
-    search_terms.append(f"scoop apps {create_time}")
-    search_terms.append(f"scoop-bucket {create_time}")
-    search_terms.append(f"scoop bucket {create_time}")
-    search_terms.append(f"scoop {create_time}")
-
+search_terms: list[str] = [
+    f"{search} {create_time}"
+    for search in [
+        "topic:scoop",
+        "scoop",
+        "topic:scoop-apps",
+        "scoop-apps",
+        "scoop apps",
+        "topic:scoop-bucket",
+        "scoop-bucket",
+        "scoop bucket",
+    ]
+    for create_time in create_times
+]
 
 client = GitHubClient(os.environ["GITHUB_TOKEN"])
 
