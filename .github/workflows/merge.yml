@@ -27,6 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: write
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -44,15 +45,16 @@ jobs:
       - name: Download buckets
         run: uv run --no-dev -m download
 
-      - name: Upload buckets
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - name: Delete old buckets
+        run: gh cache delete buckets || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Save buckets
+        uses: actions/cache/save@v6
         with:
-          name: buckets
+          key: buckets
           path: buckets/
-          retention-days: 1
-          compression-level: 0
-          include-hidden-files: true
-          if-no-files-found: error
 
       - name: Sleep
         run: sleep 10
@@ -82,17 +84,18 @@ jobs:
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
 
       - name: Restore buckets index
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@v6
         with:
           path: index_buckets.json
           key: index
           restore-keys: index
 
-      - name: Download buckets
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - name: Restore buckets
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          name: buckets
+          key: buckets
           path: buckets/
+          fail-on-cache-miss: true
 
       - name: Copy ./bucket to buckets
         run: |
