@@ -1,7 +1,7 @@
 {
     "version": "2.2.0",
     "description": "PawnIO is a scriptable universal kernel driver, allowing hardware access to a wide variety of programs.",
-    "homepage": "https://pawnio.eu/",
+    "homepage": "https://pawnio.eu",
     "license": "MIT",
     "architecture": {
         "64bit": {
